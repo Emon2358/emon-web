@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Web VJ - Glitch Crusher EX</title>
+    <title>Web VJ - Chroma Delay Simulator</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
@@ -31,8 +31,9 @@
             background: #000;
             border: 2px solid #0f0;
             box-shadow: 0 0 15px #0f0 inset;
-            min-width: 640px;
-            min-height: 480px;
+            /* 固定サイズ */
+            width: 640px;
+            height: 480px;
         }
 
         canvas {
@@ -41,8 +42,8 @@
             display: block;
         }
 
-        /* ソースとなるvideo要素は非表示にする */
-        #webcam, #videoFile, #videoURL {
+        /* ソースとなるvideo要素は非表示 */
+        video {
             display: none;
         }
 
@@ -56,16 +57,15 @@
             background: rgba(0, 0, 0, 0.5);
             border: 1px solid #0a0;
             max-width: 90%;
-            overflow-x: auto;
         }
 
         .input-group, .slider-group {
             display: flex;
             flex-direction: column;
-            align-items: flex-start; /* 左寄せ */
+            align-items: flex-start;
             width: 250px;
             min-width: 150px;
-            flex-grow: 1; /* 横幅いっぱいに広がる */
+            flex-grow: 1;
         }
 
         label {
@@ -93,22 +93,13 @@
             cursor: pointer;
             box-shadow: 0 0 10px #f0f;
         }
-
-        input[type="range"]::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            background: #f0f;
-            border: 2px solid #0f0;
-            cursor: pointer;
-            box-shadow: 0 0 10px #f0f;
-        }
-
-        input[type="file"], input[type="text"] {
+        
+        input[type="file"] {
             background: #333;
             border: 1px solid #0f0;
             color: #f0f;
             padding: 5px;
-            width: calc(100% - 12px); /* paddingとborder分を引く */
+            width: calc(100% - 12px);
             margin-bottom: 5px;
         }
 
@@ -138,24 +129,14 @@
             color: #111;
             box-shadow: 0 0 15px #f0f;
         }
-
-        .separator {
-            width: 100%;
-            height: 1px;
-            background: #0a0;
-            margin: 10px 0;
-        }
     </style>
 </head>
 <body>
 
-    <h1>Web VJ - Glitch Crusher EX 廃材エディション 📼</h1>
+    <h1>Web VJ - Chroma Delay Simulator 📼</h1>
 
     <div id="video-container">
-        <canvas id="outputCanvas"></canvas>
-        <video id="webcam" autoplay playsinline muted></video>
-        <video id="videoFile" autoplay playsinline loop muted></video>
-        <video id="videoURL" autoplay playsinline loop muted crossorigin="anonymous"></video>
+        <canvas id="outputCanvas" width="640" height="480"></canvas>
     </div>
 
     <div id="controls">
@@ -164,49 +145,25 @@
         </div>
 
         <div class="input-group">
-            <label for="fileInput">VIDEO FILE (ローカルファイル)</label>
-            <input type="file" id="fileInput" accept="video/*">
+            <label for="fileInput">VIDEO FILES (複数選択可)</label>
+            <input type="file" id="fileInput" accept="video/*" multiple>
         </div>
         
         <div class="input-group">
             <label for="urlInput">VIDEO URL (外部URL)</label>
-            <input type="text" id="urlInput" placeholder="例: https://example.com/video.mp4">
+            <input type="text" id="urlInput" placeholder="CORS対応URLのみ">
             <button id="loadURL">URLを読み込む</button>
         </div>
 
-        <div class="separator"></div>
-
-        <div class="slider-group">
-            <label for="glitchAmount">DATA CRASH (データ破壊)</label>
-            <input type=range id="glitchAmount" min="0" max="100" value="0">
-        </div>
-        <div class="slider-group">
-            <label for="syncLoss">SYNC LOSS (同期ズレ)</label>
-            <input type=range id="syncLoss" min="0" max="100" value="0">
-        </div>
-        <div class="slider-group">
-            <label for="colorShift">COLOR BLEED (色ズレ)</label>
+        <div class="slider-group" style="width: 100%;">
+            <label for="colorShift">CHROMA DELAY (色信号遅延)</label>
             <input type=range id="colorShift" min="0" max="100" value="0">
-        </div>
-        <div class="slider-group">
-            <label for="noiseAmount">STATIC NOISE (砂嵐ノイズ)</label>
-            <input type=range id="noiseAmount" min="0" max="100" value="0">
-        </div>
-         <div class="slider-group">
-            <label for="feedbackAmount">VIDEO FEEDBACK (映像フィードバック)</label>
-            <input type=range id="feedbackAmount" min="0" max="100" value="0">
-        </div>
-        <div class="slider-group">
-            <label for="opacityMix">SOURCE MIX (ソース合成強度)</label>
-            <input type=range id="opacityMix" min="0" max="100" value="50">
         </div>
     </div>
 
     <script>
-        const webcamVideo = document.getElementById('webcam');
-        const fileVideo = document.getElementById('videoFile');
-        const urlVideo = document.getElementById('videoURL');
         const canvas = document.getElementById('outputCanvas');
+        // 2Dコンテキストを一度だけ取得
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
         const startCamButton = document.getElementById('startCam');
@@ -215,45 +172,41 @@
         const loadURLButton = document.getElementById('loadURL');
 
         // コントロール
-        const glitchSlider = document.getElementById('glitchAmount');
-        const syncSlider = document.getElementById('syncLoss');
         const colorSlider = document.getElementById('colorShift');
-        const noiseSlider = document.getElementById('noiseAmount');
-        const feedbackSlider = document.getElementById('feedbackAmount');
-        const opacityMixSlider = document.getElementById('opacityMix');
 
-        let videoWidth = 640;
-        let videoHeight = 480;
+        // キャンバスサイズ (固定)
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+
         let animationFrameId;
-
-        // 現在アクティブなソースを追跡
+        
+        // 動作中のビデオソースを管理する配列
         let activeSources = [];
 
         // 1. Webカメラの起動
         async function startWebcam() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: videoWidth, height: videoHeight },
+                    video: { width: canvasWidth, height: canvasHeight },
                     audio: false
                 });
+                const webcamVideo = document.createElement('video');
                 webcamVideo.srcObject = stream;
+                webcamVideo.autoplay = true;
+                webcamVideo.playsinline = true;
+                webcamVideo.muted = true;
+                
                 await webcamVideo.play();
+                
                 startCamButton.textContent = "CAM RUNNING...";
                 startCamButton.disabled = true;
                 
-                // 初回のみキャンバスサイズ設定と描画ループ開始
-                if (!animationFrameId) {
-                    webcamVideo.onloadedmetadata = () => {
-                        videoWidth = webcamVideo.videoWidth;
-                        videoHeight = webcamVideo.videoHeight;
-                        canvas.width = videoWidth;
-                        canvas.height = videoHeight;
-                        if (!animationFrameId) { // 重複防止
-                            animationFrameId = requestAnimationFrame(processFrame);
-                        }
-                    };
-                }
                 activeSources.push(webcamVideo);
+
+                // 描画ループを開始
+                if (!animationFrameId) {
+                    animationFrameId = requestAnimationFrame(processFrame);
+                }
 
             } catch (err) {
                 console.error("カメラの起動に失敗しました:", err);
@@ -262,27 +215,28 @@
         }
         startCamButton.addEventListener('click', startWebcam);
 
-        // 2. ローカル動画ファイルの読み込み
+        // 2. ローカル動画ファイルの読み込み (複数対応)
         fileInput.addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                const objectURL = URL.createObjectURL(file);
-                fileVideo.src = objectURL;
-                fileVideo.play().catch(e => console.error("Video file play error:", e));
+            const files = event.target.files;
+            if (!files) return;
 
-                // 初回のみキャンバスサイズ設定と描画ループ開始
-                if (!animationFrameId) {
-                    fileVideo.onloadedmetadata = () => {
-                        videoWidth = fileVideo.videoWidth;
-                        videoHeight = fileVideo.videoHeight;
-                        canvas.width = videoWidth;
-                        canvas.height = videoHeight;
-                        if (!animationFrameId) { // 重複防止
-                            animationFrameId = requestAnimationFrame(processFrame);
-                        }
-                    };
-                }
+            for (const file of files) {
+                const objectURL = URL.createObjectURL(file);
+                const fileVideo = document.createElement('video');
+                fileVideo.src = objectURL;
+                fileVideo.autoplay = true;
+                fileVideo.playsinline = true;
+                fileVideo.loop = true;
+                fileVideo.muted = true;
+
+                fileVideo.play().catch(e => console.error("Video file play error:", e));
+                
                 activeSources.push(fileVideo);
+            }
+            
+            // 描画ループを開始
+            if (files.length > 0 && !animationFrameId) {
+                animationFrameId = requestAnimationFrame(processFrame);
             }
         });
 
@@ -290,185 +244,154 @@
         loadURLButton.addEventListener('click', () => {
             const url = urlInput.value.trim();
             if (url) {
+                const urlVideo = document.createElement('video');
                 urlVideo.src = url;
+                urlVideo.autoplay = true;
+                urlVideo.playsinline = true;
+                urlVideo.loop = true;
+                urlVideo.muted = true;
+                urlVideo.crossOrigin = "anonymous"; // CORS対応
+
                 urlVideo.play().catch(e => {
                     console.error("Video URL play error:", e);
-                    alert("URL動画の読み込み・再生に失敗しました。URLが正しいか、CORSの問題がないか確認してください。");
+                    alert("URL動画の読み込み・再生に失敗しました。CORSの問題がないか確認してください。");
                 });
-
-                // 初回のみキャンバスサイズ設定と描画ループ開始
-                if (!animationFrameId) {
-                    urlVideo.onloadedmetadata = () => {
-                        videoWidth = urlVideo.videoWidth;
-                        videoHeight = urlVideo.videoHeight;
-                        canvas.width = videoWidth;
-                        canvas.height = videoHeight;
-                        if (!animationFrameId) { // 重複防止
-                            animationFrameId = requestAnimationFrame(processFrame);
-                        }
-                    };
-                }
+                
                 activeSources.push(urlVideo);
+
+                // 描画ループを開始
+                if (!animationFrameId) {
+                    animationFrameId = requestAnimationFrame(processFrame);
+                }
             }
         });
 
         // 4. 毎フレームの処理
         function processFrame() {
-            // ソースがない場合は何もしない
+            // ソースがなければ停止
             if (activeSources.length === 0) {
-                 animationFrameId = requestAnimationFrame(processFrame);
+                 animationFrameId = null;
                  return;
             }
+            
+            // A. キャンバスをクリア (アスペクト比維持のため)
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-            // フィードバックエフェクトを適用（前フレームの画像を少し残す）
-            const feedbackAmount = parseInt(feedbackSlider.value, 10);
-            if (feedbackAmount > 0) {
-                ctx.globalAlpha = 1 - (feedbackAmount / 150); // 残像の強さ
-                ctx.drawImage(canvas, 0, 0, videoWidth, videoHeight);
-                ctx.globalAlpha = 1;
-            } else {
-                ctx.clearRect(0, 0, videoWidth, videoHeight); // フィードバックなしならクリア
-            }
+            let allSourcesReady = true;
 
-
-            // 複数のソースを重ねて描画
-            const opacityMix = parseInt(opacityMixSlider.value, 10) / 100;
-            let firstSourceDrawn = false;
-
+            // B. 複数のソースをリサイズして重ねて描画
             for (let i = 0; i < activeSources.length; i++) {
                 const source = activeSources[i];
-                if (source && !source.paused && !source.ended) {
-                    if (!firstSourceDrawn) {
-                        ctx.drawImage(source, 0, 0, videoWidth, videoHeight);
-                        firstSourceDrawn = true;
-                    } else {
-                        // 2番目以降のソースは透明度を調整して重ねる
-                        ctx.globalAlpha = opacityMix;
-                        ctx.drawImage(source, 0, 0, videoWidth, videoHeight);
-                        ctx.globalAlpha = 1; // 元に戻す
-                    }
+                if (source && !source.paused && !source.ended && source.videoWidth > 0) {
+                    
+                    // アスペクト比を維持してリサイズ (Contain)
+                    const videoWidth = source.videoWidth;
+                    const videoHeight = source.videoHeight;
+                    const ratio = Math.min(canvasWidth / videoWidth, canvasHeight / videoHeight);
+                    const newWidth = videoWidth * ratio;
+                    const newHeight = videoHeight * ratio;
+                    
+                    // キャンバスの中央に配置
+                    const x = (canvasWidth - newWidth) / 2;
+                    const y = (canvasHeight - newHeight) / 2;
+
+                    ctx.drawImage(source, x, y, newWidth, newHeight);
+                } else if (!source || source.videoWidth === 0) {
+                    allSourcesReady = false; // まだロード中
                 }
             }
-            
-            // 全てのソースが止まっている場合
-            if (!firstSourceDrawn) {
-                animationFrameId = requestAnimationFrame(processFrame);
-                return;
-            }
 
-
-            // B. canvasからピクセルデータを取得
+            // C. ピクセルデータを取得
             let imageData;
             try {
-                imageData = ctx.getImageData(0, 0, videoWidth, videoHeight);
+                // imageDataはキャンバス全体から取得 (640x480)
+                imageData = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
             } catch (e) {
                 console.error("ImageDataの取得に失敗 (CORSなど):", e);
                 // URL動画の場合、クロスオリジン制約によりImageDataの取得ができないことがある
-                // その場合はグリッチ処理をスキップして次のフレームへ
                 animationFrameId = requestAnimationFrame(processFrame);
                 return;
             }
 
-            const data = imageData.data; // ピクセルデータ配列 (R, G, B, A, R, G, B, A, ...)
+            // D. グリッチエフェクト（色信号遅延）の適用
+            const colorAmount = parseInt(colorSlider.value, 10);
+            if (colorAmount > 0) {
+                applyChromaDelay(imageData.data, canvasWidth, colorAmount);
+            }
 
-            // C. グリッチエフェクトの適用
-            applyGlitchEffects(data, videoWidth, videoHeight);
-
-            // D. 処理後のデータをcanvasに書き戻す
+            // E. 処理後のデータをcanvasに書き戻す
             ctx.putImageData(imageData, 0, 0);
 
-            // E. 次のフレームを要求
+            // F. 次のフレームを要求
             animationFrameId = requestAnimationFrame(processFrame);
         }
 
-        // 5. グリッチエフェクト関数群
-        function applyGlitchEffects(data, width, height) {
-            const glitchAmount = parseInt(glitchSlider.value, 10);
-            const syncAmount = parseInt(syncSlider.value, 10);
-            const colorAmount = parseInt(colorSlider.value, 10);
-            const noiseAmount = parseInt(noiseSlider.value, 10);
+        // 5. 色信号遅延 (Chroma Delay) エフェクト
+        // 輝度(Y)はその場に留め、色情報(U, V)を過去(左)のピクセルから持ってくる
+        function applyChromaDelay(data, width, amount) {
+            // amount (0-100) に応じて、色をズラすピクセル数 (shift) を決定
+            const shift = Math.floor(amount / 5); // 0-20 ピクセル
+            if (shift === 0) return;
 
-            // パラメータが0なら処理をスキップ (フィードバックは別で処理)
-            if (glitchAmount === 0 && syncAmount === 0 && colorAmount === 0 && noiseAmount === 0) {
-                return;
-            }
+            // 輝度計算の係数 (BT.601)
+            const Y_R = 0.299;
+            const Y_G = 0.587;
+            const Y_B = 0.114;
 
-            // --- DATA CRASH (データ破壊) ---
-            if (glitchAmount > 0) {
-                const glitchProbability = glitchAmount / 500; // 発生確率を上げる
-                const maxBlockSize = Math.floor((height * width * 4) * (glitchAmount / 500)); // ブロックサイズも大きく
-                const maxOffset = Math.floor((width * height * 4) * (glitchAmount / 400)); // オフセットも大きく
+            // YUV -> RGB 変換の係数 (概算)
+            const V_R = 1.140;
+            const U_G = -0.395;
+            const V_G = -0.581;
+            const U_B = 2.032;
 
-                for (let i = 0; i < data.length; i += 4) {
-                    if (Math.random() < glitchProbability) {
-                        const blockSize = Math.floor(Math.random() * maxBlockSize);
-                        let offset = Math.floor(Math.random() * maxOffset) - (maxOffset / 2);
-                        offset = offset - (offset % 4); // 4バイト(RGBA)単位に揃える
+            // 1行分の色情報(U, V)をバッファする
+            let lineChroma = new Float32Array(width * 2); // [U0, V0, U1, V1, ...]
+            let x_idx = 0;
 
-                        if (i + offset >= 0 && i + offset < data.length) {
-                             const sourceIndex = i + offset;
-                             for (let j = 0; j < blockSize && i + j < data.length && sourceIndex + j < data.length; j += 4) {
-                                data[i + j]     = data[sourceIndex + j];
-                                data[i + j + 1] = data[sourceIndex + j + 1];
-                                data[i + j + 2] = data[sourceIndex + j + 2];
-                             }
-                             i += blockSize; // 処理した分だけジャンプ
-                        }
-                    }
-                }
-            }
-
-            // --- SYNC LOSS (同期ズレ) ---
-            if (syncAmount > 0) {
-                const maxShift = Math.floor(width * (syncAmount / 80)); // 最大ズレ幅を大きく
-                const numLinesToShift = Math.floor(height * (syncAmount / 200)); // ズラす行数を増やす
-
-                for(let k = 0; k < numLinesToShift; k++) {
-                    const y = Math.floor(Math.random() * height); // ズラす行をランダムに選ぶ
-                    const shift = Math.floor(Math.random() * maxShift) * 4; // ズレ量 (ピクセル)
-                    if (shift > 0) {
-                        const lineOffset = y * width * 4;
-                        const lineBuffer = new Uint8ClampedArray(data.slice(lineOffset, lineOffset + width * 4)); // sliceではなくUint8ClampedArrayでコピーを最適化
-                        for (let x = 0; x < width * 4; x++) {
-                            data[lineOffset + x] = lineBuffer[(x + shift) % (width * 4)];
-                        }
-                    }
-                }
-            }
-
-            // --- COLOR BLEED (色ズレ) ---
-            if (colorAmount > 0) {
-                const shiftAmount = Math.floor(colorAmount / 5); // ズラす量 (1-20ピクセル)
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
                 
-                for (let i = 0; i < data.length; i += 4) {
-                    const rIndex = (i + shiftAmount * 4) % data.length;
-                    let bIndex = (i - shiftAmount * 4);
-                    if (bIndex < 0) bIndex = data.length + bIndex;
-                    
-                    data[i] = data[rIndex]; // Red
-                    data[i + 2] = data[bIndex + 2]; // Blue
+                // 1. 現在のピクセルの輝度(Y)を計算
+                const y_curr = Y_R * r + Y_G * g + Y_B * b;
+
+                // 2. 現在のピクセルの色差(U, V)を計算し、バッファに保存
+                // YUVのU,V計算 (概算)
+                const u_curr = 0.492 * (b - y_curr);
+                const v_curr = 0.877 * (r - y_curr);
+                
+                lineChroma[x_idx * 2] = u_curr;
+                lineChroma[x_idx * 2 + 1] = v_curr;
+
+                // 3. 遅延させるインデックス(過去)を計算
+                let chroma_idx = x_idx - shift;
+                if (chroma_idx < 0) chroma_idx = 0; // 行の左端より前は参照しない
+
+                // 4. 過去の色情報(U_delay, V_delay)を取得
+                const u_delay = lineChroma[chroma_idx * 2];
+                const v_delay = lineChroma[chroma_idx * 2 + 1];
+
+                // 5. 「現在の輝度(Y_curr)」と「過去の色(U_delay, V_delay)」でRGBを再合成
+                let new_r = y_curr + V_R * v_delay;
+                let new_g = y_curr + U_G * u_delay + V_G * v_delay;
+                let new_b = y_curr + U_B * u_delay;
+
+                // 0-255 の範囲にクリップ
+                data[i]     = Math.max(0, Math.min(255, new_r));
+                data[i + 1] = Math.max(0, Math.min(255, new_g));
+                data[i + 2] = Math.max(0, Math.min(255, new_b));
+                // data[i + 3] (Alpha) は変更しない
+
+                // 水平インデックス(x)を更新
+                x_idx++;
+                if (x_idx === width) {
+                    x_idx = 0; // 次の行へ
+                    // 行が変わったら色バッファをリセット（行をまたいで色がズレないように）
+                    lineChroma.fill(0);
                 }
             }
-
-            // --- STATIC NOISE (砂嵐ノイズ) --- 新規エフェクト
-            if (noiseAmount > 0) {
-                const noiseDensity = noiseAmount / 100; // 0-1の密度
-                for (let i = 0; i < data.length; i += 4) {
-                    if (Math.random() < noiseDensity) {
-                        const gray = Math.floor(Math.random() * 255);
-                        data[i] = gray;     // R
-                        data[i + 1] = gray; // G
-                        data[i + 2] = gray; // B
-                        // data[i + 3] = 255; // A (透明度) はそのままか、ノイズに合わせて調整
-                    }
-                }
-            }
-        }
-
-        // 初期描画ループの開始 (ソースが何もなくてもCanvasの更新は行う)
-        // これにより、後からソースが追加された際にスムーズに開始できる
-        if (!animationFrameId) {
-            animationFrameId = requestAnimationFrame(processFrame);
         }
     </script>
 
