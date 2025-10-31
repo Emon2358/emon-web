@@ -1,0 +1,268 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+    <title>信者衛門</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <style>
+        /* 見た目を「昔のサイト」風にするCSS */
+        body {
+            font-family: 'MS PGothic', 'Osaka', 'Hiragino Kaku Gothic ProN', sans-serif;
+            background-color: #FFFFCC; /* クリーム色の背景 */
+            color: #000000;
+        }
+
+        a {
+            color: #0000FF;
+            text-decoration: underline;
+        }
+        a:visited {
+            color: #800080;
+        }
+
+        /* テーブルレイアウト */
+        table {
+            border-collapse: collapse;
+            border-color: #663300;
+            border-style: solid;
+        }
+
+        th {
+            background-color: #CC9966;
+            color: #FFFFFF;
+            padding: 5px;
+            border: 2px solid #663300;
+        }
+
+        td {
+            padding: 15px;
+            background-color: #FFFFFF;
+            border: 1px dotted #663300;
+            vertical-align: top;
+        }
+
+        /* 昔のボタン風スタイル */
+        .btn {
+            border: 2px outset #C0C0C0;
+            background-color: #C0C0C0;
+            font-weight: bold;
+            padding: 3px 8px;
+            cursor: pointer;
+        }
+        .btn:active {
+            border-style: inset;
+        }
+
+        /* 最先端の検索ボックス（見た目はレトロ） */
+        .search-box {
+            font-size: 16px;
+            padding: 5px;
+            border: 2px inset #C0C0C0;
+            width: 90%;
+            margin: 10px 0;
+        }
+
+        /* 読み込んだREADMEのスタイル */
+        #readme-container {
+            height: 500px;
+            overflow-y: scroll;
+            border: 1px solid #999;
+            padding: 10px;
+            background: #FAFAFA;
+        }
+
+        /* READMEから生成された各お知らせセクション */
+        .announcement-item {
+            border-bottom: 1px dashed #CCC;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        /* README内のh2, h3などをいい感じに */
+        #readme-container h1,
+        #readme-container h2,
+        #readme-container h3 {
+            background-color: #EEEEFF;
+            border-left: 5px solid #000080;
+            padding: 5px;
+            margin-top: 0;
+        }
+
+        /* 昔のサイトといえばコレ */
+        .blink {
+            animation: blink-animation 1s steps(2, start) infinite;
+        }
+        @keyframes blink-animation {
+            to {
+                visibility: hidden;
+            }
+        }
+    </style>
+</head>
+
+<body bgcolor="#FFFFCC" text="#000000" link="#0000FF" vlink="#800080">
+
+    <table width="80%" border="3" align="center" cellpadding="5" cellspacing="0">
+        <tr>
+            <th colspan="2">
+                <font size="6" color="#FFFF00">
+                    ★☆★ 衛門のホームページへようこそ ★☆★
+                </font>
+                
+            </th>
+        </tr>
+        <tr>
+            <td width="25%" valign="top">
+                <center>
+                    
+                    <br>
+                    <b><font color="#FF0000">工事中</font></b>
+                </center>
+                <hr>
+                <b>■ めにゅー ■</b>
+                <ul>
+                    <li><a href="#">ほーむ</a></li>
+                    <li><a href="#">日記</a></li>
+                    <li><a href="#">りんく集</a></li>
+                </ul>
+                <hr>
+                <b>■ 最先端機能 ■</b>
+                <p>
+                    ↓のおしらせは、GitHubから<blink class="blink">リアルタイム</blink>で読み込んでるぞ！
+                    すごい！
+                </p>
+                <p>
+                    さらに、下の箱で<br><b>クライアントサイド・<br>リアルタイム検索</b><br>ができる！
+                </p>
+                <input type="text" id="filter-input" class="search-box" placeholder="検索キーワードを入力...">
+            </td>
+
+            <td width="75%">
+                <h2><font color="#000080">■□■ おしらせ■□■</font></h2>
+
+                <marquee bgcolor="#000000" style="color: #FFFFFF; font-weight: bold; padding: 5px;">
+                    最新の情報を読み込んでいます... 読み込み完了まで待ってね！
+                </marquee>
+
+                <div id="readme-container">
+                    <p>データを読み込み中です...</p>
+                </div>
+
+                <hr>
+                <center>
+                    <button class="btn" onclick="location.reload()">
+                        最新の情報に更新 (リロード)
+                    </button>
+                </center>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2" align="center">
+                <font size="2">(C) 2025 Super Advanced Website. All rights reserved.</font>
+            </td>
+        </tr>
+    </table>
+
+    <script>
+        // ▼▼▼ ここからが【最先端技術】の本体 (JavaScript) です ▼▼▼
+
+        // ★★★ あなたのREADMEのURLに書き換えてください ★★★
+        // (例: https://raw.githubusercontent.com/USER/REPO/main/README.md)
+        const YOUR_README_URL = 'https://raw.githubusercontent.com/markedjs/marked/main/README.md';
+
+        const readmeContainer = document.getElementById('readme-container');
+        const filterInput = document.getElementById('filter-input');
+        let allAnnouncements = []; // フィルタリング用に全データを保持
+
+        /**
+         * 【最先端技術 ②】
+         * Fetch APIを使って、GitHubからREADMEのMarkdownテキストを非同期で取得します。
+         */
+        async function loadReadme() {
+            try {
+                const response = await fetch(YOUR_README_URL);
+                if (!response.ok) {
+                    throw new Error('READMEの読み込みに失敗しました...');
+                }
+                const markdown = await response.text();
+                
+                // 読み込んだデータを処理します
+                processMarkdown(markdown);
+
+            } catch (error) {
+                readmeContainer.innerHTML = `<p style="color: red;">${error.message}</p>`;
+            }
+        }
+
+        /**
+         * 【最先端技術 ③ + ④】
+         * 取得したMarkdownを処理し、DOMを動的生成します。
+         * リアルタイム検索のための準備もここで行います。
+         */
+        function processMarkdown(markdown) {
+            // MarkdownをH2の見出し(##)でセクションに分割します
+            const sections = markdown.split('\n## ');
+            
+            // 最初のセクション（通常はH1タイトルや説明）を処理
+            const firstSection = sections.shift(); // 先頭の要素を取り出す
+            
+            allAnnouncements = [
+                {
+                    content: firstSection,
+                    element: createAnnouncementElement(firstSection)
+                },
+                // 残りのH2セクションを処理
+                ...sections.map(section => {
+                    const fullSection = '## ' + section; // '## 'を元に戻す
+                    return {
+                        content: fullSection, // 検索用の生テキスト
+                        element: createAnnouncementElement(fullSection) // HTML要素
+                    };
+                })
+            ];
+
+            // コンテナをクリアして、生成した要素を追加
+            readmeContainer.innerHTML = '';
+            allAnnouncements.forEach(item => {
+                readmeContainer.appendChild(item.element);
+            });
+        }
+
+        /**
+         * 【最先端技術 ③ の一部】
+         * Markdownの断片からHTML要素を生成します。
+         */
+        function createAnnouncementElement(markdownChunk) {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'announcement-item';
+            
+            // 【最先端技術】marked.js を使って Markdown を HTML に変換
+            itemDiv.innerHTML = marked.parse(markdownChunk);
+            return itemDiv;
+        }
+
+        /**
+         * 【最先端技術 ④】
+         * リアルタイム・クライアントサイド検索の実装です。
+         */
+        filterInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+
+            // 全てのお知らせをループし、表示/非表示を切り替え
+            allAnnouncements.forEach(item => {
+                // Markdownの生テキストに検索語が含まれているかチェック
+                const isVisible = item.content.toLowerCase().includes(searchTerm);
+                
+                // DOMの表示/非表示を高速に切り替え
+                item.element.style.display = isVisible ? 'block' : 'none';
+            });
+        });
+
+        // ページが読み込まれたら、READMEの読み込みを開始します
+        document.addEventListener('DOMContentLoaded', loadReadme);
+
+        // ▲▲▲ 【最先端技術】の本体はここまで ▲▲▲
+    </script>
+
+</body>
+</html>
