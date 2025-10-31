@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Web VJ - Chroma Delay Simulator</title>
+    <title>Web VJ - Junk Crusher</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
@@ -133,17 +133,13 @@
 </head>
 <body>
 
-    <h1>Web VJ - Chroma Delay Simulator 📼</h1>
+    <h1>Web VJ - Junk Crusher 📼</h1>
 
     <div id="video-container">
         <canvas id="outputCanvas" width="640" height="480"></canvas>
     </div>
 
     <div id="controls">
-        <div class="input-group">
-            <button id="startCam">CAM START</button>
-        </div>
-
         <div class="input-group">
             <label for="fileInput">VIDEO FILES (複数選択可)</label>
             <input type="file" id="fileInput" accept="video/*" multiple>
@@ -155,9 +151,14 @@
             <button id="loadURL">URLを読み込む</button>
         </div>
 
-        <div class="slider-group" style="width: 100%;">
+        <div class="slider-group" style="width: 48%;">
             <label for="colorShift">CHROMA DELAY (色信号遅延)</label>
             <input type=range id="colorShift" min="0" max="100" value="0">
+        </div>
+        
+        <div class="slider-group" style="width: 48%;">
+            <label for="dataCrash">DATA CRASH (データ破壊)</label>
+            <input type=range id="dataCrash" min="0" max="100" value="0">
         </div>
     </div>
 
@@ -166,13 +167,13 @@
         // 2Dコンテキストを一度だけ取得
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-        const startCamButton = document.getElementById('startCam');
         const fileInput = document.getElementById('fileInput');
         const urlInput = document.getElementById('urlInput');
         const loadURLButton = document.getElementById('loadURL');
 
         // コントロール
         const colorSlider = document.getElementById('colorShift');
+        const crashSlider = document.getElementById('dataCrash'); // 追加
 
         // キャンバスサイズ (固定)
         const canvasWidth = canvas.width;
@@ -183,39 +184,7 @@
         // 動作中のビデオソースを管理する配列
         let activeSources = [];
 
-        // 1. Webカメラの起動
-        async function startWebcam() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: canvasWidth, height: canvasHeight },
-                    audio: false
-                });
-                const webcamVideo = document.createElement('video');
-                webcamVideo.srcObject = stream;
-                webcamVideo.autoplay = true;
-                webcamVideo.playsinline = true;
-                webcamVideo.muted = true;
-                
-                await webcamVideo.play();
-                
-                startCamButton.textContent = "CAM RUNNING...";
-                startCamButton.disabled = true;
-                
-                activeSources.push(webcamVideo);
-
-                // 描画ループを開始
-                if (!animationFrameId) {
-                    animationFrameId = requestAnimationFrame(processFrame);
-                }
-
-            } catch (err) {
-                console.error("カメラの起動に失敗しました:", err);
-                alert("カメラにアクセスできません。ブラウザの許可設定を確認してください。");
-            }
-        }
-        startCamButton.addEventListener('click', startWebcam);
-
-        // 2. ローカル動画ファイルの読み込み (複数対応)
+        // 1. ローカル動画ファイルの読み込み (複数対応)
         fileInput.addEventListener('change', (event) => {
             const files = event.target.files;
             if (!files) return;
@@ -240,7 +209,7 @@
             }
         });
 
-        // 3. 動画URLの読み込み
+        // 2. 動画URLの読み込み
         loadURLButton.addEventListener('click', () => {
             const url = urlInput.value.trim();
             if (url) {
@@ -266,19 +235,20 @@
             }
         });
 
-        // 4. 毎フレームの処理
+        // 3. 毎フレームの処理
         function processFrame() {
             // ソースがなければ停止
             if (activeSources.length === 0) {
                  animationFrameId = null;
+                 ctx.fillStyle = '#000';
+                 ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+                 animationFrameId = requestAnimationFrame(processFrame);
                  return;
             }
             
             // A. キャンバスをクリア (アスペクト比維持のため)
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-            let allSourcesReady = true;
 
             // B. 複数のソースをリサイズして重ねて描画
             for (let i = 0; i < activeSources.length; i++) {
@@ -297,8 +267,6 @@
                     const y = (canvasHeight - newHeight) / 2;
 
                     ctx.drawImage(source, x, y, newWidth, newHeight);
-                } else if (!source || source.videoWidth === 0) {
-                    allSourcesReady = false; // まだロード中
                 }
             }
 
@@ -309,15 +277,25 @@
                 imageData = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
             } catch (e) {
                 console.error("ImageDataの取得に失敗 (CORSなど):", e);
-                // URL動画の場合、クロスオリジン制約によりImageDataの取得ができないことがある
                 animationFrameId = requestAnimationFrame(processFrame);
                 return;
             }
 
-            // D. グリッチエフェクト（色信号遅延）の適用
+            const data = imageData.data;
+            const width = canvasWidth;
+
+            // D. グリッチエフェクトの適用
             const colorAmount = parseInt(colorSlider.value, 10);
+            const crashAmount = parseInt(crashSlider.value, 10); // 追加
+
+            // 1. DATA CRASH (データ破壊) - 激しいデジタル破壊
+            if (crashAmount > 0) {
+                applyDataCrash(data, width, crashAmount);
+            }
+
+            // 2. CHROMA DELAY (色信号遅延) - アナログ劣化
             if (colorAmount > 0) {
-                applyChromaDelay(imageData.data, canvasWidth, colorAmount);
+                applyChromaDelay(data, width, colorAmount);
             }
 
             // E. 処理後のデータをcanvasに書き戻す
@@ -326,27 +304,20 @@
             // F. 次のフレームを要求
             animationFrameId = requestAnimationFrame(processFrame);
         }
+        
+        // 最初のフレーム呼び出し
+        animationFrameId = requestAnimationFrame(processFrame);
+
 
         // 5. 色信号遅延 (Chroma Delay) エフェクト
-        // 輝度(Y)はその場に留め、色情報(U, V)を過去(左)のピクセルから持ってくる
         function applyChromaDelay(data, width, amount) {
-            // amount (0-100) に応じて、色をズラすピクセル数 (shift) を決定
             const shift = Math.floor(amount / 5); // 0-20 ピクセル
             if (shift === 0) return;
 
-            // 輝度計算の係数 (BT.601)
-            const Y_R = 0.299;
-            const Y_G = 0.587;
-            const Y_B = 0.114;
+            const Y_R = 0.299, Y_G = 0.587, Y_B = 0.114;
+            const V_R = 1.140, U_G = -0.395, V_G = -0.581, U_B = 2.032;
 
-            // YUV -> RGB 変換の係数 (概算)
-            const V_R = 1.140;
-            const U_G = -0.395;
-            const V_G = -0.581;
-            const U_B = 2.032;
-
-            // 1行分の色情報(U, V)をバッファする
-            let lineChroma = new Float32Array(width * 2); // [U0, V0, U1, V1, ...]
+            let lineChroma = new Float32Array(width * 2); 
             let x_idx = 0;
 
             for (let i = 0; i < data.length; i += 4) {
@@ -354,42 +325,62 @@
                 const g = data[i + 1];
                 const b = data[i + 2];
                 
-                // 1. 現在のピクセルの輝度(Y)を計算
                 const y_curr = Y_R * r + Y_G * g + Y_B * b;
-
-                // 2. 現在のピクセルの色差(U, V)を計算し、バッファに保存
-                // YUVのU,V計算 (概算)
                 const u_curr = 0.492 * (b - y_curr);
                 const v_curr = 0.877 * (r - y_curr);
                 
                 lineChroma[x_idx * 2] = u_curr;
                 lineChroma[x_idx * 2 + 1] = v_curr;
 
-                // 3. 遅延させるインデックス(過去)を計算
                 let chroma_idx = x_idx - shift;
-                if (chroma_idx < 0) chroma_idx = 0; // 行の左端より前は参照しない
+                if (chroma_idx < 0) chroma_idx = 0; 
 
-                // 4. 過去の色情報(U_delay, V_delay)を取得
                 const u_delay = lineChroma[chroma_idx * 2];
                 const v_delay = lineChroma[chroma_idx * 2 + 1];
 
-                // 5. 「現在の輝度(Y_curr)」と「過去の色(U_delay, V_delay)」でRGBを再合成
                 let new_r = y_curr + V_R * v_delay;
                 let new_g = y_curr + U_G * u_delay + V_G * v_delay;
                 let new_b = y_curr + U_B * u_delay;
 
-                // 0-255 の範囲にクリップ
                 data[i]     = Math.max(0, Math.min(255, new_r));
                 data[i + 1] = Math.max(0, Math.min(255, new_g));
                 data[i + 2] = Math.max(0, Math.min(255, new_b));
-                // data[i + 3] (Alpha) は変更しない
 
-                // 水平インデックス(x)を更新
                 x_idx++;
                 if (x_idx === width) {
-                    x_idx = 0; // 次の行へ
-                    // 行が変わったら色バッファをリセット（行をまたいで色がズレないように）
+                    x_idx = 0; 
                     lineChroma.fill(0);
+                }
+            }
+        }
+
+        // 6. データ破壊 (Data Crash) エフェクト
+        function applyDataCrash(data, width, amount) {
+            // amount (0-100) に応じてパラメータを決定
+            // 以前より激しくするために係数を調整
+            const glitchProbability = amount / 250; // 発生確率 (最大40%)
+            const maxBlockSize = Math.floor((data.length) * (amount / 400)); // ブロックサイズ (最大 1/4)
+            const maxOffset = Math.floor((data.length) * (amount / 300)); // オフセット (最大 1/3)
+
+            for (let i = 0; i < data.length; i += 4) {
+                if (Math.random() < glitchProbability) {
+                    // 破壊するブロックサイズ
+                    const blockSize = Math.floor(Math.random() * maxBlockSize);
+                    
+                    // コピー元のオフセット
+                    let offset = Math.floor(Math.random() * maxOffset) - (maxOffset / 2);
+                    offset = offset - (offset % 4); // 4バイト(RGBA)単位に揃える
+
+                    if (i + offset >= 0 && i + offset < data.length) {
+                         const sourceIndex = i + offset;
+                         // ブロックを丸ごとコピー (Buffer.copy のシミュレーション)
+                         for (let j = 0; j < blockSize && i + j < data.length && sourceIndex + j < data.length; j += 4) {
+                            data[i + j]     = data[sourceIndex + j];
+                            data[i + j + 1] = data[sourceIndex + j + 1];
+                            data[i + j + 2] = data[sourceIndex + j + 2];
+                         }
+                         i += blockSize; // 処理した分だけジャンプ
+                    }
                 }
             }
         }
