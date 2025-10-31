@@ -1,267 +1,475 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
+<!DOCTYPE html>
+<html lang="ja">
 <head>
-    <title>信者衛門</title>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
+    <meta charset="UTF-8">
+    <title>Web VJ - Glitch Crusher EX</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        /* 見た目を「昔のサイト」風にするCSS */
         body {
-            font-family: 'MS PGothic', 'Osaka', 'Hiragino Kaku Gothic ProN', sans-serif;
-            background-color: #FFFFCC; /* クリーム色の背景 */
-            color: #000000;
+            font-family: 'Consolas', 'Monaco', monospace;
+            background-color: #111;
+            color: #0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 1em;
+            overflow: hidden;
+            height: 100vh;
         }
 
-        a {
-            color: #0000FF;
-            text-decoration: underline;
-        }
-        a:visited {
-            color: #800080;
-        }
-
-        /* テーブルレイアウト */
-        table {
-            border-collapse: collapse;
-            border-color: #663300;
-            border-style: solid;
+        h1 {
+            color: #f0f;
+            text-shadow: 0 0 5px #f0f, 0 0 10px #f0f;
+            margin-bottom: 0.5em;
+            text-align: center;
         }
 
-        th {
-            background-color: #CC9966;
-            color: #FFFFFF;
-            padding: 5px;
-            border: 2px solid #663300;
+        #video-container {
+            position: relative;
+            background: #000;
+            border: 2px solid #0f0;
+            box-shadow: 0 0 15px #0f0 inset;
+            min-width: 640px;
+            min-height: 480px;
         }
 
-        td {
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* ソースとなるvideo要素は非表示にする */
+        #webcam, #videoFile, #videoURL {
+            display: none;
+        }
+
+        #controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
             padding: 15px;
-            background-color: #FFFFFF;
-            border: 1px dotted #663300;
-            vertical-align: top;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #0a0;
+            max-width: 90%;
+            overflow-x: auto;
         }
 
-        /* 昔のボタン風スタイル */
-        .btn {
-            border: 2px outset #C0C0C0;
-            background-color: #C0C0C0;
-            font-weight: bold;
-            padding: 3px 8px;
+        .input-group, .slider-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start; /* 左寄せ */
+            width: 250px;
+            min-width: 150px;
+            flex-grow: 1; /* 横幅いっぱいに広がる */
+        }
+
+        label {
+            font-size: 0.9em;
+            margin-bottom: 5px;
+            color: #0f0;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #333;
+            outline: none;
+            border: 1px solid #0f0;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #f0f;
+            border: 2px solid #0f0;
+            cursor: pointer;
+            box-shadow: 0 0 10px #f0f;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #f0f;
+            border: 2px solid #0f0;
+            cursor: pointer;
+            box-shadow: 0 0 10px #f0f;
+        }
+
+        input[type="file"], input[type="text"] {
+            background: #333;
+            border: 1px solid #0f0;
+            color: #f0f;
+            padding: 5px;
+            width: calc(100% - 12px); /* paddingとborder分を引く */
+            margin-bottom: 5px;
+        }
+
+        input[type="file"]::file-selector-button {
+            background: #000;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 5px 10px;
             cursor: pointer;
         }
-        .btn:active {
-            border-style: inset;
+
+        button {
+            background: #111;
+            color: #f0f;
+            border: 2px solid #f0f;
+            padding: 10px 20px;
+            font-size: 1em;
+            font-family: inherit;
+            cursor: pointer;
+            text-shadow: 0 0 5px #f0f;
+            transition: all 0.2s;
+            margin-top: 10px;
         }
 
-        /* 最先端の検索ボックス（見た目はレトロ） */
-        .search-box {
-            font-size: 16px;
-            padding: 5px;
-            border: 2px inset #C0C0C0;
-            width: 90%;
+        button:hover {
+            background: #f0f;
+            color: #111;
+            box-shadow: 0 0 15px #f0f;
+        }
+
+        .separator {
+            width: 100%;
+            height: 1px;
+            background: #0a0;
             margin: 10px 0;
-        }
-
-        /* 読み込んだREADMEのスタイル */
-        #readme-container {
-            height: 500px;
-            overflow-y: scroll;
-            border: 1px solid #999;
-            padding: 10px;
-            background: #FAFAFA;
-        }
-
-        /* READMEから生成された各お知らせセクション */
-        .announcement-item {
-            border-bottom: 1px dashed #CCC;
-            padding-bottom: 10px;
-            margin-bottom: 10px;
-        }
-
-        /* README内のh2, h3などをいい感じに */
-        #readme-container h1,
-        #readme-container h2,
-        #readme-container h3 {
-            background-color: #EEEEFF;
-            border-left: 5px solid #000080;
-            padding: 5px;
-            margin-top: 0;
-        }
-
-        /* 昔のサイトといえばコレ */
-        .blink {
-            animation: blink-animation 1s steps(2, start) infinite;
-        }
-        @keyframes blink-animation {
-            to {
-                visibility: hidden;
-            }
         }
     </style>
 </head>
+<body>
 
-<body bgcolor="#FFFFCC" text="#000000" link="#0000FF" vlink="#800080">
+    <h1>Web VJ - Glitch Crusher EX 廃材エディション 📼</h1>
 
-    <table width="80%" border="3" align="center" cellpadding="5" cellspacing="0">
-        <tr>
-            <th colspan="2">
-                <font size="6" color="#FFFF00">
-                    ★☆★ 衛門のホームページへようこそ ★☆★
-                </font>
-                
-            </th>
-        </tr>
-        <tr>
-            <td width="25%" valign="top">
-                <center>
-                    
-                    <br>
-                    <b><font color="#FF0000">工事中</font></b>
-                </center>
-                <hr>
-                <b>■ めにゅー ■</b>
-                <ul>
-                    <li><a href="#">ほーむ</a></li>
-                    <li><a href="#">日記</a></li>
-                    <li><a href="#">りんく集</a></li>
-                </ul>
-                <hr>
-                <b>■ 最先端機能 ■</b>
-                <p>
-                    ↓のおしらせは、GitHubから<blink class="blink">リアルタイム</blink>で読み込んでるぞ！
-                    すごい！
-                </p>
-                <p>
-                    さらに、下の箱で<br><b>クライアントサイド・<br>リアルタイム検索</b><br>ができる！
-                </p>
-                <input type="text" id="filter-input" class="search-box" placeholder="検索キーワードを入力...">
-            </td>
+    <div id="video-container">
+        <canvas id="outputCanvas"></canvas>
+        <video id="webcam" autoplay playsinline muted></video>
+        <video id="videoFile" autoplay playsinline loop muted></video>
+        <video id="videoURL" autoplay playsinline loop muted crossorigin="anonymous"></video>
+    </div>
 
-            <td width="75%">
-                <h2><font color="#000080">■□■ おしらせ■□■</font></h2>
+    <div id="controls">
+        <div class="input-group">
+            <button id="startCam">CAM START</button>
+        </div>
 
-                <marquee bgcolor="#000000" style="color: #FFFFFF; font-weight: bold; padding: 5px;">
-                    最新の情報を読み込んでいます... 読み込み完了まで待ってね！
-                </marquee>
+        <div class="input-group">
+            <label for="fileInput">VIDEO FILE (ローカルファイル)</label>
+            <input type="file" id="fileInput" accept="video/*">
+        </div>
+        
+        <div class="input-group">
+            <label for="urlInput">VIDEO URL (外部URL)</label>
+            <input type="text" id="urlInput" placeholder="例: https://example.com/video.mp4">
+            <button id="loadURL">URLを読み込む</button>
+        </div>
 
-                <div id="readme-container">
-                    <p>データを読み込み中です...</p>
-                </div>
+        <div class="separator"></div>
 
-                <hr>
-                <center>
-                    <button class="btn" onclick="location.reload()">
-                        最新の情報に更新 (リロード)
-                    </button>
-                </center>
-            </td>
-        </tr>
-        <tr>
-            <td colspan="2" align="center">
-                <font size="2">(C) 2025 Super Advanced Website. All rights reserved.</font>
-            </td>
-        </tr>
-    </table>
+        <div class="slider-group">
+            <label for="glitchAmount">DATA CRASH (データ破壊)</label>
+            <input type=range id="glitchAmount" min="0" max="100" value="0">
+        </div>
+        <div class="slider-group">
+            <label for="syncLoss">SYNC LOSS (同期ズレ)</label>
+            <input type=range id="syncLoss" min="0" max="100" value="0">
+        </div>
+        <div class="slider-group">
+            <label for="colorShift">COLOR BLEED (色ズレ)</label>
+            <input type=range id="colorShift" min="0" max="100" value="0">
+        </div>
+        <div class="slider-group">
+            <label for="noiseAmount">STATIC NOISE (砂嵐ノイズ)</label>
+            <input type=range id="noiseAmount" min="0" max="100" value="0">
+        </div>
+         <div class="slider-group">
+            <label for="feedbackAmount">VIDEO FEEDBACK (映像フィードバック)</label>
+            <input type=range id="feedbackAmount" min="0" max="100" value="0">
+        </div>
+        <div class="slider-group">
+            <label for="opacityMix">SOURCE MIX (ソース合成強度)</label>
+            <input type=range id="opacityMix" min="0" max="100" value="50">
+        </div>
+    </div>
 
     <script>
-        // ▼▼▼ ここからが【最先端技術】の本体 (JavaScript) です ▼▼▼
+        const webcamVideo = document.getElementById('webcam');
+        const fileVideo = document.getElementById('videoFile');
+        const urlVideo = document.getElementById('videoURL');
+        const canvas = document.getElementById('outputCanvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-        // ★★★ あなたのREADMEのURLに書き換えてください ★★★
-        // (例: https://raw.githubusercontent.com/USER/REPO/main/README.md)
-        const YOUR_README_URL = 'https://raw.githubusercontent.com/Emon2358/emon-web/main/README.md';
+        const startCamButton = document.getElementById('startCam');
+        const fileInput = document.getElementById('fileInput');
+        const urlInput = document.getElementById('urlInput');
+        const loadURLButton = document.getElementById('loadURL');
 
-        const readmeContainer = document.getElementById('readme-container');
-        const filterInput = document.getElementById('filter-input');
-        let allAnnouncements = []; // フィルタリング用に全データを保持
+        // コントロール
+        const glitchSlider = document.getElementById('glitchAmount');
+        const syncSlider = document.getElementById('syncLoss');
+        const colorSlider = document.getElementById('colorShift');
+        const noiseSlider = document.getElementById('noiseAmount');
+        const feedbackSlider = document.getElementById('feedbackAmount');
+        const opacityMixSlider = document.getElementById('opacityMix');
 
-        /**
-         * 【最先端技術 ②】
-         * Fetch APIを使って、GitHubからREADMEのMarkdownテキストを非同期で取得します。
-         */
-        async function loadReadme() {
+        let videoWidth = 640;
+        let videoHeight = 480;
+        let animationFrameId;
+
+        // 現在アクティブなソースを追跡
+        let activeSources = [];
+
+        // 1. Webカメラの起動
+        async function startWebcam() {
             try {
-                const response = await fetch(YOUR_README_URL);
-                if (!response.ok) {
-                    throw new Error('READMEの読み込みに失敗しました...');
-                }
-                const markdown = await response.text();
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: videoWidth, height: videoHeight },
+                    audio: false
+                });
+                webcamVideo.srcObject = stream;
+                await webcamVideo.play();
+                startCamButton.textContent = "CAM RUNNING...";
+                startCamButton.disabled = true;
                 
-                // 読み込んだデータを処理します
-                processMarkdown(markdown);
+                // 初回のみキャンバスサイズ設定と描画ループ開始
+                if (!animationFrameId) {
+                    webcamVideo.onloadedmetadata = () => {
+                        videoWidth = webcamVideo.videoWidth;
+                        videoHeight = webcamVideo.videoHeight;
+                        canvas.width = videoWidth;
+                        canvas.height = videoHeight;
+                        if (!animationFrameId) { // 重複防止
+                            animationFrameId = requestAnimationFrame(processFrame);
+                        }
+                    };
+                }
+                activeSources.push(webcamVideo);
 
-            } catch (error) {
-                readmeContainer.innerHTML = `<p style="color: red;">${error.message}</p>`;
+            } catch (err) {
+                console.error("カメラの起動に失敗しました:", err);
+                alert("カメラにアクセスできません。ブラウザの許可設定を確認してください。");
+            }
+        }
+        startCamButton.addEventListener('click', startWebcam);
+
+        // 2. ローカル動画ファイルの読み込み
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const objectURL = URL.createObjectURL(file);
+                fileVideo.src = objectURL;
+                fileVideo.play().catch(e => console.error("Video file play error:", e));
+
+                // 初回のみキャンバスサイズ設定と描画ループ開始
+                if (!animationFrameId) {
+                    fileVideo.onloadedmetadata = () => {
+                        videoWidth = fileVideo.videoWidth;
+                        videoHeight = fileVideo.videoHeight;
+                        canvas.width = videoWidth;
+                        canvas.height = videoHeight;
+                        if (!animationFrameId) { // 重複防止
+                            animationFrameId = requestAnimationFrame(processFrame);
+                        }
+                    };
+                }
+                activeSources.push(fileVideo);
+            }
+        });
+
+        // 3. 動画URLの読み込み
+        loadURLButton.addEventListener('click', () => {
+            const url = urlInput.value.trim();
+            if (url) {
+                urlVideo.src = url;
+                urlVideo.play().catch(e => {
+                    console.error("Video URL play error:", e);
+                    alert("URL動画の読み込み・再生に失敗しました。URLが正しいか、CORSの問題がないか確認してください。");
+                });
+
+                // 初回のみキャンバスサイズ設定と描画ループ開始
+                if (!animationFrameId) {
+                    urlVideo.onloadedmetadata = () => {
+                        videoWidth = urlVideo.videoWidth;
+                        videoHeight = urlVideo.videoHeight;
+                        canvas.width = videoWidth;
+                        canvas.height = videoHeight;
+                        if (!animationFrameId) { // 重複防止
+                            animationFrameId = requestAnimationFrame(processFrame);
+                        }
+                    };
+                }
+                activeSources.push(urlVideo);
+            }
+        });
+
+        // 4. 毎フレームの処理
+        function processFrame() {
+            // ソースがない場合は何もしない
+            if (activeSources.length === 0) {
+                 animationFrameId = requestAnimationFrame(processFrame);
+                 return;
+            }
+
+            // フィードバックエフェクトを適用（前フレームの画像を少し残す）
+            const feedbackAmount = parseInt(feedbackSlider.value, 10);
+            if (feedbackAmount > 0) {
+                ctx.globalAlpha = 1 - (feedbackAmount / 150); // 残像の強さ
+                ctx.drawImage(canvas, 0, 0, videoWidth, videoHeight);
+                ctx.globalAlpha = 1;
+            } else {
+                ctx.clearRect(0, 0, videoWidth, videoHeight); // フィードバックなしならクリア
+            }
+
+
+            // 複数のソースを重ねて描画
+            const opacityMix = parseInt(opacityMixSlider.value, 10) / 100;
+            let firstSourceDrawn = false;
+
+            for (let i = 0; i < activeSources.length; i++) {
+                const source = activeSources[i];
+                if (source && !source.paused && !source.ended) {
+                    if (!firstSourceDrawn) {
+                        ctx.drawImage(source, 0, 0, videoWidth, videoHeight);
+                        firstSourceDrawn = true;
+                    } else {
+                        // 2番目以降のソースは透明度を調整して重ねる
+                        ctx.globalAlpha = opacityMix;
+                        ctx.drawImage(source, 0, 0, videoWidth, videoHeight);
+                        ctx.globalAlpha = 1; // 元に戻す
+                    }
+                }
+            }
+            
+            // 全てのソースが止まっている場合
+            if (!firstSourceDrawn) {
+                animationFrameId = requestAnimationFrame(processFrame);
+                return;
+            }
+
+
+            // B. canvasからピクセルデータを取得
+            let imageData;
+            try {
+                imageData = ctx.getImageData(0, 0, videoWidth, videoHeight);
+            } catch (e) {
+                console.error("ImageDataの取得に失敗 (CORSなど):", e);
+                // URL動画の場合、クロスオリジン制約によりImageDataの取得ができないことがある
+                // その場合はグリッチ処理をスキップして次のフレームへ
+                animationFrameId = requestAnimationFrame(processFrame);
+                return;
+            }
+
+            const data = imageData.data; // ピクセルデータ配列 (R, G, B, A, R, G, B, A, ...)
+
+            // C. グリッチエフェクトの適用
+            applyGlitchEffects(data, videoWidth, videoHeight);
+
+            // D. 処理後のデータをcanvasに書き戻す
+            ctx.putImageData(imageData, 0, 0);
+
+            // E. 次のフレームを要求
+            animationFrameId = requestAnimationFrame(processFrame);
+        }
+
+        // 5. グリッチエフェクト関数群
+        function applyGlitchEffects(data, width, height) {
+            const glitchAmount = parseInt(glitchSlider.value, 10);
+            const syncAmount = parseInt(syncSlider.value, 10);
+            const colorAmount = parseInt(colorSlider.value, 10);
+            const noiseAmount = parseInt(noiseSlider.value, 10);
+
+            // パラメータが0なら処理をスキップ (フィードバックは別で処理)
+            if (glitchAmount === 0 && syncAmount === 0 && colorAmount === 0 && noiseAmount === 0) {
+                return;
+            }
+
+            // --- DATA CRASH (データ破壊) ---
+            if (glitchAmount > 0) {
+                const glitchProbability = glitchAmount / 500; // 発生確率を上げる
+                const maxBlockSize = Math.floor((height * width * 4) * (glitchAmount / 500)); // ブロックサイズも大きく
+                const maxOffset = Math.floor((width * height * 4) * (glitchAmount / 400)); // オフセットも大きく
+
+                for (let i = 0; i < data.length; i += 4) {
+                    if (Math.random() < glitchProbability) {
+                        const blockSize = Math.floor(Math.random() * maxBlockSize);
+                        let offset = Math.floor(Math.random() * maxOffset) - (maxOffset / 2);
+                        offset = offset - (offset % 4); // 4バイト(RGBA)単位に揃える
+
+                        if (i + offset >= 0 && i + offset < data.length) {
+                             const sourceIndex = i + offset;
+                             for (let j = 0; j < blockSize && i + j < data.length && sourceIndex + j < data.length; j += 4) {
+                                data[i + j]     = data[sourceIndex + j];
+                                data[i + j + 1] = data[sourceIndex + j + 1];
+                                data[i + j + 2] = data[sourceIndex + j + 2];
+                             }
+                             i += blockSize; // 処理した分だけジャンプ
+                        }
+                    }
+                }
+            }
+
+            // --- SYNC LOSS (同期ズレ) ---
+            if (syncAmount > 0) {
+                const maxShift = Math.floor(width * (syncAmount / 80)); // 最大ズレ幅を大きく
+                const numLinesToShift = Math.floor(height * (syncAmount / 200)); // ズラす行数を増やす
+
+                for(let k = 0; k < numLinesToShift; k++) {
+                    const y = Math.floor(Math.random() * height); // ズラす行をランダムに選ぶ
+                    const shift = Math.floor(Math.random() * maxShift) * 4; // ズレ量 (ピクセル)
+                    if (shift > 0) {
+                        const lineOffset = y * width * 4;
+                        const lineBuffer = new Uint8ClampedArray(data.slice(lineOffset, lineOffset + width * 4)); // sliceではなくUint8ClampedArrayでコピーを最適化
+                        for (let x = 0; x < width * 4; x++) {
+                            data[lineOffset + x] = lineBuffer[(x + shift) % (width * 4)];
+                        }
+                    }
+                }
+            }
+
+            // --- COLOR BLEED (色ズレ) ---
+            if (colorAmount > 0) {
+                const shiftAmount = Math.floor(colorAmount / 5); // ズラす量 (1-20ピクセル)
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    const rIndex = (i + shiftAmount * 4) % data.length;
+                    let bIndex = (i - shiftAmount * 4);
+                    if (bIndex < 0) bIndex = data.length + bIndex;
+                    
+                    data[i] = data[rIndex]; // Red
+                    data[i + 2] = data[bIndex + 2]; // Blue
+                }
+            }
+
+            // --- STATIC NOISE (砂嵐ノイズ) --- 新規エフェクト
+            if (noiseAmount > 0) {
+                const noiseDensity = noiseAmount / 100; // 0-1の密度
+                for (let i = 0; i < data.length; i += 4) {
+                    if (Math.random() < noiseDensity) {
+                        const gray = Math.floor(Math.random() * 255);
+                        data[i] = gray;     // R
+                        data[i + 1] = gray; // G
+                        data[i + 2] = gray; // B
+                        // data[i + 3] = 255; // A (透明度) はそのままか、ノイズに合わせて調整
+                    }
+                }
             }
         }
 
-        /**
-         * 【最先端技術 ③ + ④】
-         * 取得したMarkdownを処理し、DOMを動的生成します。
-         * リアルタイム検索のための準備もここで行います。
-         */
-        function processMarkdown(markdown) {
-            // MarkdownをH2の見出し(##)でセクションに分割します
-            const sections = markdown.split('\n## ');
-            
-            // 最初のセクション（通常はH1タイトルや説明）を処理
-            const firstSection = sections.shift(); // 先頭の要素を取り出す
-            
-            allAnnouncements = [
-                {
-                    content: firstSection,
-                    element: createAnnouncementElement(firstSection)
-                },
-                // 残りのH2セクションを処理
-                ...sections.map(section => {
-                    const fullSection = '## ' + section; // '## 'を元に戻す
-                    return {
-                        content: fullSection, // 検索用の生テキスト
-                        element: createAnnouncementElement(fullSection) // HTML要素
-                    };
-                })
-            ];
-
-            // コンテナをクリアして、生成した要素を追加
-            readmeContainer.innerHTML = '';
-            allAnnouncements.forEach(item => {
-                readmeContainer.appendChild(item.element);
-            });
+        // 初期描画ループの開始 (ソースが何もなくてもCanvasの更新は行う)
+        // これにより、後からソースが追加された際にスムーズに開始できる
+        if (!animationFrameId) {
+            animationFrameId = requestAnimationFrame(processFrame);
         }
-
-        /**
-         * 【最先端技術 ③ の一部】
-         * Markdownの断片からHTML要素を生成します。
-         */
-        function createAnnouncementElement(markdownChunk) {
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'announcement-item';
-            
-            // 【最先端技術】marked.js を使って Markdown を HTML に変換
-            itemDiv.innerHTML = marked.parse(markdownChunk);
-            return itemDiv;
-        }
-
-        /**
-         * 【最先端技術 ④】
-         * リアルタイム・クライアントサイド検索の実装です。
-         */
-        filterInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-
-            // 全てのお知らせをループし、表示/非表示を切り替え
-            allAnnouncements.forEach(item => {
-                // Markdownの生テキストに検索語が含まれているかチェック
-                const isVisible = item.content.toLowerCase().includes(searchTerm);
-                
-                // DOMの表示/非表示を高速に切り替え
-                item.element.style.display = isVisible ? 'block' : 'none';
-            });
-        });
-
-        // ページが読み込まれたら、READMEの読み込みを開始します
-        document.addEventListener('DOMContentLoaded', loadReadme);
-
-        // ▲▲▲ 【最先端技術】の本体はここまで ▲▲▲
     </script>
 
 </body>
